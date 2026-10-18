@@ -1,0 +1,84 @@
+name: Sync from Gitee
+
+# 定时把 Gitee 公开仓库（Mr__Pit/word-effect-studio）镜像到本仓库的 main，
+# 并重新发布 GitHub Pages。Gitee 是内容源，本仓库允许存在 Gitee 没有的文件
+# （例如本工作流自己），合并时保留。
+on:
+  schedule:
+    # 每天 04:23 UTC（北京时间 12:23）自动同步一次
+    - cron: '23 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: sync-from-gitee
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge Gitee master
+        id: sync
+        run: |
+          set -euo pipefail
+          git remote add gitee https://gitee.com/Mr__Pit/word-effect-studio.git
+          git fetch --no-tags gitee master
+          if git merge-base --is-ancestor gitee/master HEAD; then
+            echo "Gitee 没有新提交，跳过。"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # --no-ff 强制生成合并提交，避免快进时丢掉本仓库独有的文件。
+          # -X theirs：冲突时以 Gitee（内容源）为准。
+          git merge --no-ff -X theirs -m "Sync from Gitee $(git rev-parse --short gitee/master)" gitee/master
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Push to main
+        if: steps.sync.outputs.changed == 'true'
+        run: git push origin HEAD:main
+
+      - name: Stage editor site
+        if: steps.sync.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          cp tools/word-effect-editor/index.html \
+             tools/word-effect-editor/engine.js \
+             tools/word-effect-editor/templates.js \
+             tools/word-effect-editor/app.js \
+             _site/
+          ls -l _site
+
+      - name: Configure Pages
+        if: steps.sync.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        if: steps.sync.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy
+        id: deployment
+        if: steps.sync.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4
