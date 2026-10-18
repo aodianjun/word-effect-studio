@@ -2558,6 +2558,7 @@
       markDirty();
       if (key === 'id' || key === 'name') {
         updateInspectorTitles(effect);
+        updatePreviewHeader(effect);
         renderSidebar();
       }
       if (key === 'unsungDim') {
