@@ -188,7 +188,7 @@ add / mul / sin / clamp / drawText / save / restore / end
 | `app.js` | UI、预览渲染、曲线编辑、导入导出 |
 | `engine.js` | 规范化、缓动、DSL 求值、汇编器、字节码 VM、预览分词（浏览器 + Node 共用） |
 | `templates.js` | 十个 DSL 模板 + 十个程序模板 |
-| `test_engine.js` | Node 回归测试（59 项） |
+| `test_engine.js` | Node 回归测试（60 项） |
 | `make_site.py` | 把四个站点文件打包到 `build/word-effect-studio` |
 | `DEPLOY_GITHUB_PAGES.md` | GitHub Pages 部署步骤与注意事项 |
 
@@ -203,7 +203,8 @@ node tools/word-effect-editor/test_engine.js
 - `samples/word-effect-pack.json` 与 `samples/word-effect-program-pack.json` 全量规范化与幂等；
 - DSL 求值（bounce 在 p=0.35 的文档值、stagger 归一、longOnly、辉光窗口只点亮正在唱的词）；
 - 五个官方程序逐帧执行，以及「反汇编 → 汇编」后的**逐绘制调用比对**；
-- 十个内置程序模板的汇编、校验、执行与往返；VM 的逐指令 trace、栈深、局部槽快照与截断标记；
+- 十个内置程序模板的汇编、校验、执行与往返；邻字联动的同行距离衰减（当前字/邻字/两字外的
+  alpha、scale、辉光半径）；VM 的逐指令 trace、栈深、局部槽快照与截断标记；
 - 文档里的边界：单帧展开、端点拉伸、同 at 覆盖、未知缓动、未知属性、重复轨道、id `none`、
   颜色规范化、名称回落、轨道/关键帧/颜色/效果数量上限、程序版本/不安全字符串/12 KiB 预算；
 - 汇编器诊断：缺参数、未知 op、栈下溢、缺标签、重复标签、局部槽越界、未知字段、死循环预算；
