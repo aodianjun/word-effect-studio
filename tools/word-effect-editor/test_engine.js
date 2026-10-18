@@ -352,6 +352,46 @@ test('char_link links adjacent characters with a same-line distance falloff', ()
   assert.strictEqual(sink.draws.length, 4);
 });
 
+test('hello draws the first line at its own x / baseline with an alpha floor', () => {
+  const template = T.PROGRAM.hello;
+  const assembled = E.assemble(template.source, { maxLocals: template.maxLocals });
+  assert.ok(assembled.ok, assembled.errors.join('; '));
+  const sink = new LinkSink();
+  const run = E.runProgram(assembled.program, makeContext(), sink);
+  assert.ok(run.ok, run.error);
+  assert.strictEqual(sink.draws.length, 1);
+  const draw = sink.draws[0];
+  assert.strictEqual(draw.text, '夜色渐浓');
+  assert.ok(Math.abs(draw.x - 100) < 1e-9, 'line x');
+  assert.ok(Math.abs(draw.y - 160) < 1e-9, 'line baseline');
+  assert.ok(Math.abs(draw.alpha - (0.35 + 0.65 * 0.6)) < 1e-9, 'alpha floor');
+});
+
+test('gradient aligns the gradient and sweep band to the first line block', () => {
+  const template = T.PROGRAM.gradient;
+  const assembled = E.assemble(template.source, { maxLocals: template.maxLocals });
+  assert.ok(assembled.ok, assembled.errors.join('; '));
+  const sink = new RecordingSink();
+  const run = E.runProgram(assembled.program, makeContext(), sink);
+  assert.ok(run.ok, run.error);
+  const gradient = sink.calls.find((call) => call[0] === 'setGradient');
+  assert.ok(gradient, 'no gradient');
+  const [, x0, y0, x1, y1] = gradient;
+  assert.ok(Math.abs(x0 - 100) < 1e-9, 'gradient x0');
+  assert.ok(Math.abs(y0 - 115) < 1e-9, 'gradient y0');
+  assert.ok(Math.abs(x1 - 400) < 1e-9, 'gradient x1');
+  assert.ok(Math.abs(y1 - 245) < 1e-9, 'gradient y1');
+  const band = sink.calls.find((call) => call[0] === 'drawRoundRect');
+  assert.ok(band, 'no sweep band');
+  const [, bx, by, bw, bh, brx, bry] = band;
+  assert.ok(Math.abs(bx - 289.6) < 1e-9, 'band x');
+  assert.ok(Math.abs(by - 115) < 1e-9, 'band y');
+  assert.ok(Math.abs(bw - 48) < 1e-9, 'band width');
+  assert.ok(Math.abs(bh - 60) < 1e-9, 'band height');
+  assert.ok(Math.abs(brx - 30) < 1e-9, 'band radius x');
+  assert.ok(Math.abs(bry - 30) < 1e-9, 'band radius y');
+});
+
 // ---------------------------------------------------------------------------
 // 4. Normalization edge cases
 // ---------------------------------------------------------------------------
