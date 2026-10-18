@@ -92,6 +92,37 @@ class RecordingSink {
   measureText(text) { this.calls.push(['measureText', text]); return text.length * 20; }
 }
 
+// 记录每个 drawText 生效时的 alpha / scale / shadow，用于验证邻字联动
+class LinkSink extends RecordingSink {
+  constructor() {
+    super();
+    this.scaleValue = 1;
+    this.shadowRadius = null;
+    this.stateStack = [];
+    this.draws = [];
+  }
+  save() {
+    this.stateStack.push([this.scaleValue, this.shadowRadius, this.alpha]);
+    super.save();
+  }
+  restore() {
+    const state = this.stateStack.pop();
+    if (state) {
+      this.scaleValue = state[0];
+      this.shadowRadius = state[1];
+      this.alpha = state[2];
+    }
+    super.restore();
+  }
+  scale(sx, sy) { this.scaleValue = sx; super.scale(sx, sy); }
+  setShadow(r, dx, dy, color) { this.shadowRadius = r; super.setShadow(r, dx, dy, color); }
+  clearShadow() { this.shadowRadius = null; super.clearShadow(); }
+  drawText(text, x, y) {
+    this.draws.push({ text, x, y, alpha: this.alpha, scale: this.scaleValue, shadow: this.shadowRadius });
+    super.drawText(text, x, y);
+  }
+}
+
 function makeContext() {
   const line0 = {
     text: '夜色渐浓', index: 0, startMs: 0, endMs: 1200, progress: 0.6,
@@ -293,6 +324,32 @@ test('template round-trips through disassemble → assemble', () => {
     assert.ok(E.runProgram(second.program, makeContext(), sinkB).ok);
     assert.deepStrictEqual(sinkB.calls, sinkA.calls, key + ' trace differs');
   }
+});
+
+test('char_link links adjacent characters with a same-line distance falloff', () => {
+  const template = T.PROGRAM.char_link;
+  const assembled = E.assemble(template.source, { maxLocals: template.maxLocals });
+  assert.ok(assembled.ok, assembled.errors.join('; '));
+  const ctx = makeContext();
+  ctx.lines = [ctx.lines[0]];
+  ctx.words = ctx.words.slice(0, 4).map((word, index) => Object.assign({}, word, {
+    progress: [1, 0.5, 0, 0][index]
+  }));
+  const sink = new LinkSink();
+  const run = E.runProgram(assembled.program, ctx, sink);
+  assert.ok(run.ok, run.error);
+  assert.deepStrictEqual(sink.draws.map((draw) => draw.text), ['夜', '色', '渐', '浓']);
+  const [left, head, right, far] = sink.draws;
+  assert.ok(Math.abs(head.scale - 1.1) < 1e-9, 'head scale');
+  assert.ok(head.shadow > 0, 'head glow');
+  assert.ok(Math.abs(left.scale - (1 + 0.1 * 2 / 3)) < 1e-9, 'left neighbor scale');
+  assert.ok(left.shadow > 0, 'left neighbor glow');
+  assert.ok(Math.abs(right.alpha - (0.35 + 0.65 * (2 / 3))) < 1e-9, 'right neighbor alpha');
+  assert.ok(Math.abs(right.scale - (1 + 0.1 * 2 / 3)) < 1e-9, 'right neighbor scale');
+  assert.ok(far.alpha < right.alpha, 'falloff alpha');
+  assert.ok(Math.abs(far.scale - (1 + 0.1 / 3)) < 1e-9, 'two-away scale');
+  assert.ok(far.shadow > 0, 'two-away glow');
+  assert.strictEqual(sink.draws.length, 4);
 });
 
 // ---------------------------------------------------------------------------
