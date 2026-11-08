@@ -16,9 +16,18 @@ const path = require('path');
 const E = require('./engine.js');
 const T = require('./templates.js');
 
-const repoRoot = path.resolve(__dirname, '..', '..');
-const dslSamplePath = path.join(repoRoot, 'samples', 'word-effect-pack.json');
-const programSamplePath = path.join(repoRoot, 'samples', 'word-effect-program-pack.json');
+// 样例包位置对两种布局都稳健:主仓(tools/word-effect-editor → ../../samples)
+// 与独立发布仓(文件在仓库根 → ./samples)。
+const samplesDir = [
+  path.resolve(__dirname, '..', '..', 'samples'),
+  path.resolve(__dirname, 'samples'),
+  __dirname
+].find((dir) => fs.existsSync(path.join(dir, 'word-effect-pack.json')));
+if (!samplesDir) {
+  throw new Error('samples/word-effect-pack.json not found relative to ' + __dirname);
+}
+const dslSamplePath = path.join(samplesDir, 'word-effect-pack.json');
+const programSamplePath = path.join(samplesDir, 'word-effect-program-pack.json');
 
 let passed = 0;
 function test(name, fn) {
@@ -252,7 +261,7 @@ test('samples/word-effect-program-pack.json loads and every program validates', 
   const pack = readJson(programSamplePath);
   const result = E.normalizePack(pack);
   assert.ok(result.ok, result.errors.join('; '));
-  assert.strictEqual(result.pack.effects.length, 5);
+  assert.strictEqual(result.pack.effects.length, 6);
   for (const effect of result.pack.effects) {
     assert.ok(effect.program, effect.id + ' lost its program');
     const normalized = E.normalizeProgram(effect.program);
@@ -263,6 +272,16 @@ test('samples/word-effect-program-pack.json loads and every program validates', 
 test('every sample program executes one frame and draws something', () => {
   const pack = readJson(programSamplePath);
   for (const effect of pack.effects) {
+    if (effect.program.outputMode === 'boxes') {
+      // 盒模式:直绘 sink 不适用,走盒收集器并断言盒非空。
+      const frame = makeContext();
+      frame.lines = [];
+      const sink = E.createBoxCollectorSink((text) => text.length * 10, frame.colors.unsung, frame.textSize);
+      const result = E.runProgram(effect.program, frame, sink);
+      assert.ok(result.ok && !sink.failed, effect.id + ': ' + result.error);
+      assert.ok(sink.boxes.length > 0, effect.id + ' emitted no boxes');
+      continue;
+    }
     const sink = new RecordingSink();
     const result = E.runProgram(effect.program, makeContext(), sink);
     assert.ok(result.ok, effect.id + ': ' + result.error);
@@ -754,6 +773,179 @@ test('estimated program bytes match the documented formula', () => {
     constants: [{ type: 'number', value: '1.5' }]
   };
   assert.strictEqual(E.estimateProgramBytes(program), 2 * 12 + (3 + 8));
+});
+
+// ---------------------------------------------------------------------------
+// 8. Box output mode (mirrors EffectBoxModeTest.kt)
+// ---------------------------------------------------------------------------
+
+console.log('\n[8] Box output mode');
+
+function makeFullContext() {
+  const base = makeContext();
+  // runProgram 的整块路径需要 lines;补齐两行与 lineIndex(与 Kotlin 整块上下文同构)。
+  base.lines = [
+    { text: '夜色渐浓', index: 0, startMs: 0, endMs: 1200, progress: 0.6, x: 100, width: 300, baseline: 160, height: 60 },
+    { text: 'Hello world', index: 1, startMs: 1200, endMs: 2400, progress: 0.2, x: 120, width: 280, baseline: 230, height: 60 }
+  ];
+  base.lineIndex = 0;
+  return base;
+}
+
+const stubMeasure = (text) => text.length * 10;
+
+function collectBoxes(program, ctx) {
+  const frame = ctx || makeFullContext();
+  const sink = E.createBoxCollectorSink(
+    stubMeasure,
+    (frame.colors && frame.colors.unsung) || 0,
+    frame.textSize || 44
+  );
+  const result = E.runProgram(program, frame, sink);
+  return { result, failed: sink.failed, boxes: sink.boxes };
+}
+
+test('drawText becomes a text box with captured paint state', () => {
+  const { result, failed, boxes } = collectBoxes({
+    outputMode: 'boxes',
+    maxLocals: 0,
+    constants: [
+      { value: '1' },                       // 0: alpha
+      { value: '-15654349' },               // 1: 颜色 0xFF112233(带符号十进制)
+      { value: '72' },                      // 2: 字号
+      { type: 'string', value: '你' },       // 3: 文本
+      { value: '15' },                      // 4: x
+      { value: '120' }                      // 5: baseline
+    ],
+    code: [
+      { op: 'const', arg: 1 }, { op: 'setColor' },
+      { op: 'const', arg: 0 }, { op: 'setAlpha' },
+      { op: 'const', arg: 2 }, { op: 'setTextSize' },
+      { op: 'const', arg: 3 }, { op: 'const', arg: 4 }, { op: 'const', arg: 5 },
+      { op: 'drawText' },
+      { op: 'end' }
+    ]
+  }, makeFullContext());
+  assert.ok(result.ok, result.error);
+  assert.ok(!failed);
+  assert.strictEqual(boxes.length, 1);
+  assert.strictEqual(boxes[0].type, 'text');
+  assert.strictEqual(boxes[0].text, '你');
+  assert.strictEqual(boxes[0].x, 15);
+  assert.strictEqual(boxes[0].baseline, 120);
+  assert.strictEqual(boxes[0].paint.color, 0xFF112233 | 0);
+  assert.strictEqual(boxes[0].paint.alpha, 1);
+  assert.strictEqual(boxes[0].paint.textSize, 72);
+  const t = boxes[0].transform;
+  assert.strictEqual(t.m0, 1); assert.strictEqual(t.m1, 0); assert.strictEqual(t.m2, 0);
+  assert.strictEqual(t.m3, 0); assert.strictEqual(t.m4, 1); assert.strictEqual(t.m5, 0);
+});
+
+test('translate+rotate bakes the same matrix as direct canvas semantics', () => {
+  // Kotlin golden:translate(100,50) → rotate(90°) → drawText("X",10,20) ⇒ 点 (10,20) → (80,60)。
+  const { result, failed, boxes } = collectBoxes({
+    outputMode: 'boxes',
+    maxLocals: 0,
+    constants: [
+      { type: 'string', value: 'X' },
+      { value: '10' }, { value: '20' },
+      { value: '100' }, { value: '50' }, { value: '90' }
+    ],
+    code: [
+      { op: 'const', arg: 3 }, { op: 'const', arg: 4 }, { op: 'translate' },
+      { op: 'const', arg: 5 }, { op: 'rotate' },
+      { op: 'const', arg: 0 }, { op: 'const', arg: 1 }, { op: 'const', arg: 2 },
+      { op: 'drawText' },
+      { op: 'end' }
+    ]
+  }, makeFullContext());
+  assert.ok(result.ok && !failed);
+  const t = boxes[0].transform;
+  const x = t.m0 * 10 + t.m1 * 20 + t.m2;
+  const y = t.m3 * 10 + t.m4 * 20 + t.m5;
+  assert.ok(Math.abs(x - 80) < 1e-3, 'x=' + x);
+  assert.ok(Math.abs(y - 60) < 1e-3, 'y=' + y);
+});
+
+test('box count budget fails the frame (no partial boxes)', () => {
+  const loopStart = 2;
+  const code = [
+    { op: 'const', arg: 0 }, { op: 'storeLocal', arg: 0 },
+    { op: 'loadLocal', arg: 0 }, { op: 'const', arg: 2 }, { op: 'lt' },
+    { op: 'jz', arg: 0 }, // 占位
+    { op: 'const', arg: 3 }, { op: 'const', arg: 3 }, { op: 'const', arg: 3 }, { op: 'drawText' },
+    { op: 'loadLocal', arg: 0 }, { op: 'const', arg: 1 }, { op: 'add' }, { op: 'storeLocal', arg: 0 },
+    { op: 'jump', arg: loopStart },
+    { op: 'end' }
+  ];
+  code[5] = { op: 'jz', arg: code.length - 1 };
+  const { failed } = collectBoxes({
+    outputMode: 'boxes',
+    maxLocals: 1,
+    constants: [
+      { value: '0' }, { value: '1' },
+      { value: String(E.MAX_EFFECT_BOXES + 8) },
+      { type: 'string', value: 'w' }
+    ],
+    code
+  });
+  assert.ok(failed);
+});
+
+test('path segment budget fails the frame', () => {
+  const code = [];
+  for (let i = 0; i < E.MAX_EFFECT_PATH_POINTS_PER_BOX + 1; i++) {
+    code.push({ op: 'const', arg: 1 }, { op: 'const', arg: 0 }, { op: 'pathLine' });
+  }
+  code.push({ op: 'drawPath' }, { op: 'end' });
+  const { failed } = collectBoxes({
+    outputMode: 'boxes',
+    maxLocals: 0,
+    constants: [{ value: '0' }, { value: '1' }],
+    code
+  });
+  assert.ok(failed);
+});
+
+test('normalizeProgram preserves boxes outputMode and drops unknown values', () => {
+  const boxes = E.normalizeProgram({ outputMode: 'boxes', code: [{ op: 'end' }] });
+  assert.ok(boxes.ok);
+  assert.strictEqual(boxes.program.outputMode, 'boxes');
+  const unknown = E.normalizeProgram({ outputMode: 'particles', code: [{ op: 'end' }] });
+  assert.ok(unknown.ok);
+  assert.strictEqual(unknown.program.outputMode, undefined);
+  const legacy = E.normalizeProgram({ code: [{ op: 'end' }] });
+  assert.ok(legacy.ok);
+  assert.strictEqual(legacy.program.outputMode, undefined);
+});
+
+test('Kotlin parity: JS box collector reproduces EffectBoxModeTest goldens', () => {
+  // 与 EffectBoxModeTest.rotateScaleCompositionStaysExactAsMatrix 同一程序:
+  // scale(2,3) → rotate(90°):M = S·R = [2c -2s; 3s 3c]。
+  const { result, failed, boxes } = collectBoxes({
+    outputMode: 'boxes',
+    maxLocals: 0,
+    constants: [
+      { type: 'string', value: 'Y' },
+      { value: '2' }, { value: '3' }, { value: '90' }
+    ],
+    code: [
+      { op: 'const', arg: 1 }, { op: 'const', arg: 2 }, { op: 'scale' },
+      { op: 'const', arg: 3 }, { op: 'rotate' },
+      { op: 'const', arg: 0 }, { op: 'const', arg: 0 }, { op: 'const', arg: 0 },
+      { op: 'drawText' },
+      { op: 'end' }
+    ]
+  }, makeFullContext());
+  assert.ok(result.ok && !failed);
+  const t = boxes[0].transform;
+  const rad = (90 * Math.PI) / 180;
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  assert.ok(Math.abs(t.m0 - 2 * c) < 1e-4, 'm0=' + t.m0);
+  assert.ok(Math.abs(t.m1 - (-2 * s)) < 1e-4, 'm1=' + t.m1);
+  assert.ok(Math.abs(t.m3 - 3 * s) < 1e-4, 'm3=' + t.m3);
+  assert.ok(Math.abs(t.m4 - 3 * c) < 1e-4, 'm4=' + t.m4);
 });
 
 console.log('\n' + passed + ' tests passed' + (process.exitCode ? ' — with failures' : ''));
