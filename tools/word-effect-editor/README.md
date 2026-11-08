@@ -193,9 +193,10 @@ add / mul / sin / clamp / drawText / save / restore / end
   `歌词|注音`、`[mm:ss.xx]` LRC 时间戳、`[间奏 8]`、`#` 注释、空行停顿。
 - **时间**:优先级为点击同步(Space 打点 / 退格撤销)> LRC 时间戳 > BPM 铺底;可选拍点
   吸附;行列表可直接改行时间与跳转。
-- **编排**:四个参数化手法(绕词中心旋转的正弦波浪 / 弹跳 / 左右滑入 / 强调脉冲)按
-  「(行号+词序) mod 轮换周期」分配;主题(抒情 / 动态文字 / 文字PV / 和风)与 seed 决定
-  全部参数,相同 seed 逐字节复现;滑杆可覆盖任一参数。
+- **编排**:四个参数化手法(绕词中心旋转的正弦波浪 / 弹跳 / 级联滑入 / 强调脉冲)按
+  「(行号+词序) mod 轮换周期」分配;**8 个调优预设**(抒情慢歌 / AMLL 大字卡点 / 逐词瀑布 /
+  打字机 / 和风摇曳 / 热血全开 / 星空闪烁 / 极简纯净)一键套用,同预设同观感;主题与 seed
+  决定随机编排的全部参数,相同 seed 逐字节复现;滑杆可覆盖任一参数(覆盖后预设回落「自定义」)。
 - **预览即实机**:预览直接跑与实机同一份 `EffectVm` 盒收集器,导出的程序与预览所见一致。
 - **直接入包**:编排好点「加入当前效果包」,效果进左侧列表末尾,可继续微调后随整包导出;
   也可以导出效果包 JSON / LRC / 可回灌的工程 JSON。
@@ -215,7 +216,7 @@ add / mul / sin / clamp / drawText / save / restore / end
 | `templates.js` | 十个 DSL 模板 + 十个程序模板 |
 | `motion.js` / `motion-ui.js` | Motion 编排核心 + 单页工作区 UI(顶栏「Motion 编排」切换) |
 | `test_engine.js` | Node 回归测试(编辑器 68 项) |
-| `test_motion.js` | Motion 编排核心回归测试(14 项) |
+| `test_motion.js` | Motion 编排核心回归测试(19 项) |
 | `make_site.py` | 把站点文件打包到 `build/word-effect-studio`(含 Motion) |
 | `DEPLOY_GITHUB_PAGES.md` | GitHub Pages 部署步骤与注意事项 |
 

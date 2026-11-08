@@ -239,47 +239,98 @@ function makeRng(seed) {
 const THEMES = {
   lyric: {
     name: '抒情',
-    waveAmp: [0.12, 0.22],
-    waveK: [2.2, 4.0],
-    rotAmp: [3, 10],
-    bounceH: [0.1, 0.2],
-    slideD: [0.4, 0.7],
-    pulse: [0.12, 0.22],
+    waveAmp: [0.08, 0.16],
+    waveK: [1.6, 3.0],
+    rotAmp: [2, 8],
+    bounceH: [0.08, 0.16],
+    slideD: [0.35, 0.6],
+    slideStagger: [0.02, 0.06],
+    pulse: [0.10, 0.18],
     cycles: [1, 2],
-    unsungDim: [0.3, 0.42]
+    unsungDim: [0.30, 0.40]
   },
   dynamic: {
     name: '动态文字',
-    waveAmp: [0.22, 0.4],
-    waveK: [5.0, 9.0],
-    rotAmp: [10, 24],
-    bounceH: [0.25, 0.45],
-    slideD: [0.7, 1.3],
-    pulse: [0.22, 0.4],
+    waveAmp: [0.16, 0.30],
+    waveK: [3.0, 6.0],
+    rotAmp: [6, 14],
+    bounceH: [0.18, 0.34],
+    slideD: [0.5, 0.9],
+    slideStagger: [0.04, 0.10],
+    pulse: [0.18, 0.30],
     cycles: [2, 3],
-    unsungDim: [0.34, 0.5]
+    unsungDim: [0.34, 0.46]
   },
   typepv: {
     name: '文字PV',
-    waveAmp: [0.04, 0.1],
-    waveK: [1.2, 2.0],
-    rotAmp: [0, 4],
-    bounceH: [0.05, 0.12],
-    slideD: [1.0, 1.8],
-    pulse: [0.08, 0.16],
+    waveAmp: [0.03, 0.08],
+    waveK: [1.0, 1.8],
+    rotAmp: [0, 3],
+    bounceH: [0.04, 0.10],
+    slideD: [0.8, 1.4],
+    slideStagger: [0.06, 0.14],
+    pulse: [0.06, 0.14],
     cycles: [1, 1],
-    unsungDim: [0.2, 0.32]
+    unsungDim: [0.18, 0.30]
   },
   japanese: {
     name: '和风',
-    waveAmp: [0.1, 0.16],
-    waveK: [1.8, 2.8],
-    rotAmp: [6, 14],
-    bounceH: [0.14, 0.26],
-    slideD: [0.5, 0.9],
-    pulse: [0.16, 0.28],
+    waveAmp: [0.08, 0.14],
+    waveK: [1.5, 2.6],
+    rotAmp: [4, 10],
+    bounceH: [0.10, 0.20],
+    slideD: [0.4, 0.8],
+    slideStagger: [0.03, 0.07],
+    pulse: [0.12, 0.22],
     cycles: [2, 2],
-    unsungDim: [0.3, 0.44]
+    unsungDim: [0.28, 0.40]
+  }
+};
+
+/**
+ * 命名预设:每条是一组调好的完整参数(覆盖主题随机),选了即用、同预设同观感。
+ * params 走 styleFromSeed 的覆盖通道,slideStagger / slideAlt 一并锁定。
+ */
+const PRESETS = {
+  ballad: {
+    name: '抒情慢歌',
+    theme: 'lyric',
+    params: { waveAmp: 0.10, waveK: 2.2, rotAmp: 4, bounceH: 0.12, slideD: 0.35, slideStagger: 0.03, slideAlt: true, pulse: 0.12, cycle: 2, flash: false, unsungDim: 0.34 }
+  },
+  amll: {
+    name: 'AMLL 大字卡点',
+    theme: 'typepv',
+    params: { waveAmp: 0.04, waveK: 1.2, rotAmp: 0, bounceH: 0.32, slideD: 0.0, slideStagger: 0.05, slideAlt: false, pulse: 0.30, cycle: 1, flash: true, unsungDim: 0.44 }
+  },
+  cascade: {
+    name: '逐词瀑布',
+    theme: 'dynamic',
+    params: { waveAmp: 0.0, waveK: 2.0, rotAmp: 0, bounceH: 0.05, slideD: 0.9, slideStagger: 0.10, slideAlt: false, pulse: 0.10, cycle: 1, flash: false, unsungDim: 0.38 }
+  },
+  typewriter: {
+    name: '打字机',
+    theme: 'typepv',
+    params: { waveAmp: 0.0, waveK: 1.0, rotAmp: 0, bounceH: 0.0, slideD: 0.7, slideStagger: 0.14, slideAlt: false, pulse: 0.06, cycle: 1, flash: false, unsungDim: 0.25 }
+  },
+  japanese: {
+    name: '和风摇曳',
+    theme: 'japanese',
+    params: { waveAmp: 0.12, waveK: 1.8, rotAmp: 7, bounceH: 0.10, slideD: 0.5, slideStagger: 0.04, slideAlt: true, pulse: 0.14, cycle: 2, flash: false, unsungDim: 0.32 }
+  },
+  hype: {
+    name: '热血全开',
+    theme: 'dynamic',
+    params: { waveAmp: 0.30, waveK: 5.5, rotAmp: 16, bounceH: 0.38, slideD: 0.8, slideStagger: 0.06, slideAlt: true, pulse: 0.36, cycle: 3, flash: true, unsungDim: 0.46 }
+  },
+  sparkle: {
+    name: '星空闪烁',
+    theme: 'lyric',
+    params: { waveAmp: 0.14, waveK: 3.2, rotAmp: 6, bounceH: 0.14, slideD: 0.3, slideStagger: 0.04, slideAlt: true, pulse: 0.22, cycle: 2, flash: true, unsungDim: 0.40 }
+  },
+  clean: {
+    name: '极简纯净',
+    theme: 'typepv',
+    params: { waveAmp: 0.02, waveK: 1.0, rotAmp: 0, bounceH: 0.04, slideD: 0.15, slideStagger: 0.02, slideAlt: false, pulse: 0.05, cycle: 1, flash: false, unsungDim: 0.30 }
   }
 };
 
@@ -311,6 +362,10 @@ function styleFromSeed(seed, themeKey, overrides) {
     rotAmp: jitter('rotAmp'),
     bounceH: jitter('bounceH'),
     slideD: jitter('slideD'),
+    slideStagger: Number.isFinite(over.slideStagger)
+      ? over.slideStagger
+      : round4(pickRange(rng, theme.slideStagger || [0.02, 0.08])),
+    slideAlt: over.slideAlt === undefined ? rng() < 0.5 : !!over.slideAlt,
     pulse: jitter('pulse'),
     cycle,
     flash: over.flash === undefined ? rng() < 0.5 : !!over.flash,
@@ -413,6 +468,8 @@ function buildProgramSource(style) {
     'translate',
     'loadLocal 6',
     'wordField text',
+    'loadLocal 6',
+    'wordField x',
     'loadLocal 2',
     'lineAtField baseline',
     'loadLocal 5',
@@ -424,8 +481,6 @@ function buildProgramSource(style) {
     'globalField textSize',
     'mul',
     'add',
-    'loadLocal 6',
-    'wordField x',
     'drawText',
     'restore'
   ];
@@ -435,6 +490,8 @@ function buildProgramSource(style) {
     ...wordAlpha,
     'loadLocal 6',
     'wordField text',
+    'loadLocal 6',
+    'wordField x',
     'loadLocal 2',
     'lineAtField baseline',
     'loadLocal 6',
@@ -451,18 +508,25 @@ function buildProgramSource(style) {
     'globalField textSize',
     'mul',
     'sub',
-    'loadLocal 6',
-    'wordField x',
     'drawText'
   ];
 
-  // 手法 2:slide —— 词进度前半程滑入,方向按词序交替
+  // 手法 2:slide —— 级联滑入(词序 × stagger 错峰),前半程进入,方向可配
+  const slideDirCode = style.slideAlt
+    ? ['loadLocal 0', 'push 2', 'mod', 'push 2', 'mul', 'push 1', 'sub']
+    : ['push -1'];
   const slide = [
-    // appear = min(wp*2, 1) → local 7
+    // appear = min((wp - i*stagger)*2, 1) → local 7(级联错峰)
     'loadLocal 6',
     'wordField progress',
+    'loadLocal 0',
+    'push ' + num(style.slideStagger),
+    'mul',
+    'sub',
     'push 2',
     'mul',
+    'push 0',
+    'max',
     'push 1',
     'min',
     'storeLocal 7',
@@ -476,17 +540,9 @@ function buildProgramSource(style) {
     'setAlpha',
     'loadLocal 6',
     'wordField text',
-    'loadLocal 2',
-    'lineAtField baseline',
     'loadLocal 6',
     'wordField x',
-    'loadLocal 0',
-    'push 2',
-    'mod',
-    'push 2',
-    'mul',
-    'push 1',
-    'sub',
+    ...slideDirCode,
     'push ' + num(style.slideD),
     'mul',
     'globalField textSize',
@@ -496,6 +552,8 @@ function buildProgramSource(style) {
     'sub',
     'mul',
     'add',
+    'loadLocal 2',
+    'lineAtField baseline',
     'drawText'
   ];
 
@@ -526,10 +584,10 @@ function buildProgramSource(style) {
     'translate',
     'loadLocal 6',
     'wordField text',
-    'loadLocal 2',
-    'lineAtField baseline',
     'loadLocal 6',
     'wordField x',
+    'loadLocal 2',
+    'lineAtField baseline',
     'drawText',
     'restore'
   ];
@@ -931,6 +989,7 @@ function clampNumber(value, min, max, fallback) {
     buildTimeline,
     makeRng,
     THEMES,
+    PRESETS,
     styleFromSeed,
     buildProgramSource,
     buildEffectPack,
