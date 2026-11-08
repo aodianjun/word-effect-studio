@@ -17,6 +17,7 @@ const state = {
   tap: [],
   manualTimes: {},
   seed: 1,
+  presetKey: 'ballad',
   theme: 'lyric',
   overrides: {},
   palette: { sung: 0xFFFFFFFF, unsung: 0x88FFFFFF, glow: 0xFF66AAFF, accent: 0xFFFFAA33 },
@@ -66,6 +67,8 @@ function readControls() {
     rotAmp: Number($('rotAmp').value),
     bounceH: Number($('bounceH').value),
     slideD: Number($('slideD').value),
+    slideStagger: Number($('slideStagger').value),
+    slideAlt: $('slideAlt').value === '1',
     pulse: Number($('pulse').value),
     unsungDim: Number($('unsungDim').value),
     cycle: Number($('cycle').value),
@@ -368,6 +371,8 @@ function randomAll() {
   state.theme = theme;
   state.seed = Math.floor(Math.random() * 0xffffff) + 1;
   state.overrides = {}; // 清空手动覆盖,吃主题+seed 全随机
+  state.presetKey = 'custom';
+  $('preset').value = 'custom';
   syncControlsFromStyle();
   refresh();
 }
@@ -375,29 +380,57 @@ function randomAll() {
 function syncControlsFromStyle() {
   $('theme').value = state.theme;
   $('seed').value = state.seed;
-  const style = M.styleFromSeed(state.seed, state.theme, {});
+  // 有覆盖(预设/滑杆)时按覆盖同步,否则按主题随机同步
+  const over = state.overrides && Object.keys(state.overrides).length ? state.overrides : {};
+  const style = M.styleFromSeed(state.seed, state.theme, over);
   const set = (id, value) => { $(id).value = value; };
   set('waveAmp', Math.abs(style.waveAmp));
   set('waveK', Math.abs(style.waveK));
   set('rotAmp', style.rotAmp);
   set('bounceH', style.bounceH);
   set('slideD', style.slideD);
+  set('slideStagger', style.slideStagger);
+  set('slideAlt', style.slideAlt ? '1' : '0');
   set('pulse', style.pulse);
   set('unsungDim', style.unsungDim);
   set('cycle', style.cycle);
   $('flash').checked = style.flash;
+  $('preset').value = state.presetKey;
+}
+
+// 应用命名预设:滑杆/开关整体回填到预设参数,效果确定性一致
+function applyPreset(key) {
+  const preset = M.PRESETS[key];
+  if (!preset) return;
+  state.presetKey = key;
+  state.theme = preset.theme;
+  state.overrides = Object.assign({}, preset.params);
+  syncControlsFromStyle();
+  refresh();
 }
 
 for (const id of ['bpm', 'startSec', 'lineDur', 'snap']) {
   $(id).addEventListener('change', refresh);
 }
 for (const id of ['theme', 'cycle', 'seed', 'waveAmp', 'waveK', 'rotAmp', 'bounceH',
-  'slideD', 'pulse', 'unsungDim', 'flash', 'sungColor', 'glowColor']) {
+  'slideD', 'slideStagger', 'slideAlt', 'pulse', 'unsungDim', 'flash', 'sungColor', 'glowColor']) {
   $(id).addEventListener('input', () => {
-    state.manualTimes = state.manualTimes; // 保持
+    if (id !== 'theme' && id !== 'seed') {
+      // 手动调整任一参数 → 预设回落「自定义」
+      state.presetKey = 'custom';
+      $('preset').value = 'custom';
+    }
     refresh();
   });
 }
+// 预设选择器
+$('preset').innerHTML = Object.keys(M.PRESETS).map((key) =>
+  '<option value="' + key + '">' + M.PRESETS[key].name + '</option>'
+).join('') + '<option value="custom">自定义(当前滑杆)</option>';
+$('preset').addEventListener('change', () => {
+  const key = $('preset').value;
+  if (key !== 'custom') applyPreset(key);
+});
 $('dice').addEventListener('click', () => {
   state.seed = Math.floor(Math.random() * 0xffffff) + 1;
   $('seed').value = state.seed;
@@ -502,11 +535,9 @@ $('lyrics').value = [
   '而我还记得|na yi ge xia tian',
   '黎明之前的合唱'
 ].join('\n');
-state.theme = 'lyric';
 state.seed = 20261109;
 $('seed').value = state.seed;
-syncControlsFromStyle();
-refresh();
+applyPreset('ballad');
 requestAnimationFrame(tick);
 
   // ---- 单页模式切换与主编辑器桥 ----

@@ -260,4 +260,69 @@ test('project JSON round-trips through toProject', () => {
   assert.deepStrictEqual(JSON.parse(JSON.stringify(project)), project);
 });
 
+// ---------------------------------------------------------------------------
+// 9. 命名预设(PRESETS)
+// ---------------------------------------------------------------------------
+
+console.log('\n[9] Presets');
+
+test('every preset builds within budget and is deterministic', () => {
+  for (const [key, preset] of Object.entries(M.PRESETS)) {
+    const style = M.styleFromSeed(20261109, preset.theme, preset.params);
+    const a = M.buildEffectPack({ rows: [] }, style, { title: key });
+    const b = M.buildEffectPack({ rows: [] }, style, { title: key });
+    assert.ok(a.ok, key + ': ' + (a.errors || []).join('; '));
+    assert.ok(b.ok);
+    assert.deepStrictEqual(a.pack, b.pack, key + ' not deterministic');
+    assert.ok(a.stats.instructions <= E.MAX_EFFECT_CODE, key + ' instructions ' + a.stats.instructions);
+    assert.ok(a.stats.drawOps <= E.MAX_EFFECT_DRAW_OPS_PER_FRAME, key + ' drawOps ' + a.stats.drawOps);
+    assert.strictEqual(a.effect.program.outputMode, 'boxes');
+  }
+});
+
+test('cascade preset encodes the stagger constant', () => {
+  const style = M.styleFromSeed(1, 'dynamic', M.PRESETS.cascade.params);
+  const built = M.buildEffectPack({ rows: [] }, style, {});
+  assert.ok(built.ok);
+  const json = JSON.stringify(built.pack);
+  assert.ok(json.includes('0.1'), 'stagger 0.10 missing from constants');
+});
+
+test('fixed-direction preset drops the alternate chain', () => {
+  const style = M.styleFromSeed(1, 'typepv', M.PRESETS.typewriter.params);
+  assert.strictEqual(style.slideAlt, false);
+  const built = M.buildEffectPack({ rows: [] }, style, {});
+  assert.ok(built.ok);
+  const code = JSON.stringify(built.effect.program.code);
+  // 固定滑向:mod 仅出现在手法分派(1 次);交替滑向会有第 2 次
+  const modCount = code.split('"mod"').length - 1;
+  assert.strictEqual(modCount, 1, 'typewriter should not alternate direction, mod x' + modCount);
+});
+
+test('styleFromSeed honors slideStagger / slideAlt overrides', () => {
+  const style = M.styleFromSeed(3, 'lyric', { slideStagger: 0.22, slideAlt: false });
+  assert.strictEqual(style.slideStagger, 0.22);
+  assert.strictEqual(style.slideAlt, false);
+  const built = M.buildEffectPack({ rows: [] }, style, {});
+  assert.ok(built.ok);
+  assert.ok(JSON.stringify(built.pack).includes('0.22'));
+});
+
+test('wave boxes land on word.x / baseline (drawText push-order pin)', () => {
+  // 回归钉:压序必须 text→x→y。waveAmp=0 时盒坐标应逐值等于词几何。
+  const style = M.styleFromSeed(9, 'lyric', { waveAmp: 0.0, rotAmp: 0, cycle: 1 });
+  const built = M.buildEffectPack({ rows: [] }, style, {});
+  assert.ok(built.ok);
+  const frame = makeFrame('你好世界', 0.5);
+  const sink = E.createBoxCollectorSink((text) => text.length * 40, frame.colors.unsung, frame.textSize);
+  assert.ok(E.runProgram(built.effect.program, frame, sink).ok);
+  assert.strictEqual(sink.boxes.length, frame.words.length);
+  sink.boxes.forEach((box, index) => {
+    const word = frame.words[index];
+    assert.strictEqual(box.text, word.text, 'text mismatch at ' + index);
+    assert.ok(Math.abs(box.x - word.x) < 0.5, 'x swapped at ' + index + ': ' + box.x + ' vs ' + word.x);
+    assert.ok(Math.abs(box.baseline - word.baseline) < 0.5, 'baseline swapped at ' + index);
+  });
+});
+
 console.log('\n' + passed + ' tests passed' + (process.exitCode ? ' — with failures' : ''));
