@@ -1,39 +1,11 @@
-# Word Effect Studio(含 Motion 编排)
+# Word Effect Studio
 
-HyperGlow 单词效果包编辑器 + 歌词动态排版编排器的**完整源码发布仓**:声明式轨道(`tracks` /
-`colors`)、沙箱字节码程序(`program`)、盒模型排版(`outputMode: "boxes"`)、实时预览、
-LRC 时间轴、导入导出 `.hgwordanim.json`。
+HyperGlow 单词效果包的浏览器编辑器：写声明式轨道（`tracks` / `colors`）、写沙箱字节码程序
+（`program`）、实时预览、导入导出 `.hgwordanim.json`。
 
-开发主仓在 `com.aodianjun.hyperglow.cnplus` 的 `tools/word-effect-editor/`;本仓库是面向
-GitHub Pages 的独立发布仓,站点文件就在仓库根,随主仓发布同步。规格以主仓
-[`docs/WORD_EFFECT_PACKS.md`](https://github.com/aodianjun/com.aodianjun.hyperglow.cnplus) 为准。
-
-## GitHub Pages 部署(纯网页操作,不用命令行)
-
-**第一步:把文件传进仓库。** 打开你的 GitHub 仓库页面(没有就右上角 **New repository**
-新建一个,公开 Public、不要勾选初始化 README):
-
-1. 点 **Add file → Upload files**;
-2. 把本目录里的全部文件拖进上传区(`.gitignore` / `.patch.json` / `desc.txt` 可以不传);
-3. 底部 Commit changes 直接提交到 `main` 分支。
-
-> 传错了/要更新:同样走 Upload files 覆盖同名文件再提交即可。
-
-**第二步:开启 GitHub Pages。**
-
-1. 仓库页 → **Settings → Pages**;
-2. Build and deployment → Source 选 **Deploy from a branch**;
-3. Branch 选 **main**,目录选 **/(root)** → Save;
-4. 等一两分钟,页面顶部会给出地址:`https://<你的用户名>.github.io/<仓库名>/`。
-
-打开该地址就是主编辑器;顶栏 **Motion 编排** 进入歌词动态排版编排器。
-
-**常见问题**
-
-- 打开 404:确认 Pages 的 Branch 是 `main` + `/(root)`,且仓库根有 `index.html`;
-- 样式/脚本丢失:确认 `engine.js` / `app.js` / `templates.js` / `motion.js` 与
-  `index.html` 在**同一层目录**;
-- 改了文件没生效:Pages 有缓存,等 1–2 分钟或强制刷新(Ctrl+F5)。
+规格以仓库文档为准：[`docs/WORD_EFFECT_PACKS.md`](../../docs/WORD_EFFECT_PACKS.md)。编辑器里的
+规范化、缓动、求值与 VM 都按 `WordEffectModels.kt` / `EffectProgram.kt` / `EffectRuntime.kt`
+逐值对齐，并用仓库自带的两个样例包做回归测试。
 
 ## 打开
 
@@ -45,6 +17,18 @@ GitHub Pages 的独立发布仓,站点文件就在仓库根,随主仓发布同�
 python -m http.server 8799 --bind 127.0.0.1
 # http://127.0.0.1:8799/index.html
 ```
+
+## 部署到 GitHub Pages
+
+编辑器是纯静态页面，GitHub Pages 可以直接托管：
+
+- **单独仓库**：把 `index.html` / `engine.js` / `templates.js` / `app.js` 放到仓库根目录，
+  Settings → Pages → Deploy from a branch → `main` / `(root)`。
+- **现有仓库**：仓库已带 `.github/workflows/pages-word-effect-editor.yml`，Pages Source 选
+  **GitHub Actions** 后推 `main` 即可；工作流只发布六个站点文件。
+- 生成干净目录：`python tools/word-effect-editor/make_site.py --out build/word-effect-studio`。
+
+完整步骤和注意事项见 [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md)。
 
 ## 界面
 
@@ -198,9 +182,9 @@ add / mul / sin / clamp / drawText / save / restore / end
 
 ## Motion 编排(歌词动态排版)
 
-`motion.html` 是独立工作区,参考 [JIZURA](https://github.com/852wa/JIZURA)(MIT)的创作流,
-把「整首歌的动态排版」一次性编排成**一个 HyperGlow 盒模式效果**:入口在主编辑器顶栏
-「Motion 编排」。
+主编辑器内置工作区(顶栏 **Motion 编排** 按钮切换,与编辑器同页,不再单独开页),
+参考 [JIZURA](https://github.com/852wa/JIZURA)(MIT)的创作流,
+把「整首歌的动态排版」一次性编排成**一个 HyperGlow 盒模式效果**。
 
 流程:**写歌词(JIZURA 式轻量语法)→ 对时间(BPM 铺底 / 点击同步 / LRC 时间戳)→
 选主题摇一摇(seed 可复现)→ 导出效果包**。
@@ -213,7 +197,8 @@ add / mul / sin / clamp / drawText / save / restore / end
   「(行号+词序) mod 轮换周期」分配;主题(抒情 / 动态文字 / 文字PV / 和风)与 seed 决定
   全部参数,相同 seed 逐字节复现;滑杆可覆盖任一参数。
 - **预览即实机**:预览直接跑与实机同一份 `EffectVm` 盒收集器,导出的程序与预览所见一致。
-- **导出**:效果包 JSON(导入 HyperGlow 外观 → 导入单词效果包)、LRC、可回灌的工程 JSON。
+- **直接入包**:编排好点「加入当前效果包」,效果进左侧列表末尾,可继续微调后随整包导出;
+  也可以导出效果包 JSON / LRC / 可回灌的工程 JSON。
 - **预算护栏**:生成器保证落在 512 指令 / 12 KiB / 4096 绘制每帧内,状态栏实时显示用量。
 
 与 JIZURA 的差异(边界):不导出 MP4 / PNG 序列(HyperGlow 的目标是锁屏/AOD 实时渲染);
@@ -228,16 +213,16 @@ add / mul / sin / clamp / drawText / save / restore / end
 | `app.js` | UI、预览渲染、曲线编辑、导入导出 |
 | `engine.js` | 规范化、缓动、DSL 求值、汇编器、字节码 VM、预览分词（浏览器 + Node 共用） |
 | `templates.js` | 十个 DSL 模板 + 十个程序模板 |
-| `motion.html` / `motion.js` | Motion 编排器:歌词动态排版的独立工作区(见下) |
+| `motion.js` / `motion-ui.js` | Motion 编排核心 + 单页工作区 UI(顶栏「Motion 编排」切换) |
 | `test_engine.js` | Node 回归测试(编辑器 68 项) |
 | `test_motion.js` | Motion 编排核心回归测试(14 项) |
+| `make_site.py` | 把站点文件打包到 `build/word-effect-studio`(含 Motion) |
 | `DEPLOY_GITHUB_PAGES.md` | GitHub Pages 部署步骤与注意事项 |
 
 ## 回归测试
 
 ```bash
-node test_engine.js
-node test_motion.js
+node tools/word-effect-editor/test_engine.js
 ```
 
 覆盖：

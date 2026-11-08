@@ -3995,4 +3995,28 @@
     state.programError = '首帧渲染异常：' + (error && error.message ? error.message : String(error));
   }
   requestAnimationFrame(tick);
+
+  /**
+   * Motion 编排器(单页工作区,见 motion-ui.js)的公开桥:把生成的效果加入当前包。
+   * 返回新效果 id;失败返回 null。走与「+ 程序」模板完全相同的落库/刷新路径。
+   */
+  window.WEStudio = {
+    addEffect(effect) {
+      try {
+        pushUndo();
+        const hydrated = hydrateEffect(effect);
+        hydrated.id = uniqueId(hydrated.id || 'motion');
+        state.pack.effects.push(hydrated);
+        state.selected = state.pack.effects.length - 1;
+        state.preview.positionMs = 0;
+        markDirty();
+        renderAll();
+        resetInspectorScroll();
+        scheduleSave();
+        return hydrated.id;
+      } catch (error) {
+        return null;
+      }
+    }
+  };
 })();

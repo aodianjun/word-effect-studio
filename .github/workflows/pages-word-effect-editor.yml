@@ -40,7 +40,7 @@ jobs:
              tools/word-effect-editor/engine.js \
              tools/word-effect-editor/templates.js \
              tools/word-effect-editor/app.js \
-             tools/word-effect-editor/motion.html \
+             tools/word-effect-editor/motion-ui.js \
              tools/word-effect-editor/motion.js \
              _site/
           ls -l _site

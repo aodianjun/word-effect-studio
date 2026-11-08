@@ -1,235 +1,14 @@
-<!DOCTYPE html>
-<html lang="zh-hans">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HyperGlow Motion · 歌词动态排版编排器</title>
-<style>
-  :root {
-    color-scheme: dark;
-    --bg: #17181c;
-    --panel: #1f2127;
-    --panel2: #262932;
-    --line: #33363f;
-    --text: #e8eaf0;
-    --muted: #9aa0ad;
-    --accent: #7ab3ff;
-    --ok: #5fd08a;
-    --bad: #ff8a8a;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 13px/1.55 "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
-  }
-  header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
-    position: sticky; top: 0; z-index: 5;
-  }
-  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
-  header .sub { color: var(--muted); font-size: 12px; }
-  header .spacer { flex: 1; }
-  a { color: var(--accent); text-decoration: none; }
-  .layout { display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
-  .col-left { width: 400px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
-  .col-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-  .card h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; letter-spacing: .04em; }
-  textarea {
-    width: 100%; min-height: 180px; resize: vertical;
-    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
-    border-radius: 8px; padding: 8px; font: 12px/1.6 ui-monospace, Consolas, monospace;
-  }
-  input[type="text"], input[type="number"], select {
-    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
-    border-radius: 6px; padding: 4px 8px; font: inherit;
-  }
-  input[type="number"] { width: 72px; }
-  input[type="range"] { width: 120px; accent-color: var(--accent); }
-  button {
-    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
-    border-radius: 8px; padding: 5px 12px; font: inherit; cursor: pointer;
-  }
-  button:hover { border-color: var(--accent); }
-  button.primary { background: #2b62b0; border-color: #2b62b0; }
-  button.small { padding: 2px 8px; font-size: 12px; }
-  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0; }
-  .row label { color: var(--muted); white-space: nowrap; }
-  .hint { color: var(--muted); font-size: 12px; }
-  .warn { color: #ffce7a; font-size: 12px; white-space: pre-wrap; }
-  .stat { color: var(--muted); font-size: 12px; }
-  .stat b { color: var(--text); font-weight: 600; }
-  details summary { cursor: pointer; color: var(--muted); }
-  details .syntax { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; }
-  details .syntax code { background: var(--panel2); border-radius: 4px; padding: 0 4px; }
-  canvas#preview {
-    width: 100%; aspect-ratio: 16 / 9; display: block;
-    background: #000; border: 1px solid var(--line); border-radius: 10px;
-  }
-  .transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .timecode { font: 12px ui-monospace, Consolas, monospace; color: var(--muted); min-width: 150px; }
-  .linelist { max-height: 260px; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
-  .linerow { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-radius: 6px; }
-  .linerow.active { background: #2b62b033; }
-  .linerow.interlude { color: var(--muted); font-style: italic; }
-  .linerow input[type="number"] { width: 64px; padding: 2px 6px; }
-  .linerow .text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .badge { font-size: 10px; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); }
-  .badge.flash { color: #ffe27a; border-color: #ffe27a66; }
-  .badge.emph { color: #ff9ad2; border-color: #ff9ad266; }
-  .tapbar {
-    display: flex; gap: 8px; align-items: center; margin-top: 8px;
-    padding: 8px; border: 1px dashed var(--line); border-radius: 8px;
-  }
-  #tapButton { font-size: 15px; padding: 8px 22px; }
-  input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
-  .sync-mode { display: flex; align-items: center; gap: 6px; }
-</style>
-</head>
-<body>
-<header>
-  <h1>HyperGlow Motion</h1>
-  <span class="sub">歌词动态排版编排器 · 参考创作流自 JIZURA (MIT) · 产出 HyperGlow 盒模式效果包</span>
-  <span class="spacer"></span>
-  <a href="./index.html">← 文字效果编辑器</a>
-</header>
+(function () {
+'use strict';
 
-<div class="layout">
-  <div class="col-left">
-    <div class="card">
-      <h2>歌词</h2>
-      <textarea id="lyrics" spellcheck="false"></textarea>
-      <div id="parseStatus" class="hint"></div>
-      <details>
-        <summary>语法说明</summary>
-        <ul class="syntax">
-          <li>一行就是一句;空行留出停顿</li>
-          <li><code>我还记得/黎明的颜色</code> — <code>/</code> 标记镜头切分(记录用)</li>
-          <li><code>*黎明*</code> — 强调段(行内含强调 → 该行编排幅度加成)</li>
-          <li>行末 <code>!</code> — 闪光(行开始瞬间全亮脉冲)</li>
-          <li><code>歌词|注音</code> — 注音/备注(HyperGlow 的注音由宿主绘制)</li>
-          <li><code>[01:23.45]歌词</code> — 直接使用 LRC 时间戳</li>
-          <li><code>[间奏 8]</code> — 8 秒间奏(省略秒数 = 4 秒)</li>
-          <li><code>#</code> 开头 — 注释</li>
-        </ul>
-      </details>
-    </div>
 
-    <div class="card">
-      <h2>音乐与时间</h2>
-      <div class="row">
-        <input type="file" id="musicFile" accept="audio/*" style="display:none">
-        <button id="loadMusic">载入音乐</button>
-        <audio id="music" controls style="flex:1; height:32px"></audio>
-      </div>
-      <div class="row">
-        <label>BPM</label><input type="number" id="bpm" value="120" min="30" max="300" step="1">
-        <label>开始(秒)</label><input type="number" id="startSec" value="0" min="0" step="0.5">
-        <label>行时长(秒)</label><input type="number" id="lineDur" value="0" min="0" step="0.5">
-        <label class="sync-mode"><input type="checkbox" id="snap"> 吸附拍点</label>
-        <button class="small" id="retime">重新铺时间</button>
-      </div>
-      <div class="hint">行时长填 0 = 每行 4 拍(BPM 决定)。LRC 时间戳与点击同步优先于 BPM 铺底。</div>
-      <div class="tapbar">
-        <label class="sync-mode"><input type="checkbox" id="syncMode"> 同步模式</label>
-        <button id="tapButton" class="primary">TAP(空格)</button>
-        <button class="small" id="tapUndo">撤销一次(退格)</button>
-        <button class="small" id="tapClear">清除点击</button>
-        <span class="hint" id="tapCount"></span>
-      </div>
-      <div class="hint">同步模式下跟着音乐,在每行开始的瞬间按空格打点;按错了用退格撤销。</div>
-    </div>
-
-    <div class="card">
-      <h2>行与镜头</h2>
-      <div class="linelist" id="lineList"></div>
-    </div>
-  </div>
-
-  <div class="col-right">
-    <div class="card">
-      <h2>预览</h2>
-      <canvas id="preview" width="1280" height="720"></canvas>
-      <div class="transport">
-        <button id="playBtn">▶ 播放</button>
-        <label class="sync-mode"><input type="checkbox" id="loop" checked> 循环</label>
-        <label>速度
-          <select id="speed">
-            <option value="1" selected>1×</option>
-            <option value="0.75">0.75×</option>
-            <option value="0.5">0.5×</option>
-          </select>
-        </label>
-        <span class="timecode" id="timecode">00:00.00 / 00:00.00</span>
-        <span class="hint" id="frameStatus"></span>
-      </div>
-    </div>
-
-    <div class="card">
-      <h2>编排(每次随机整体更换;R 键重摇)</h2>
-      <div class="row">
-        <label>主题</label>
-        <select id="theme">
-          <option value="lyric">抒情</option>
-          <option value="dynamic">动态文字</option>
-          <option value="typepv">文字PV</option>
-          <option value="japanese">和风</option>
-        </select>
-        <label>手法轮换</label>
-        <select id="cycle">
-          <option value="1">1 · 单一波形</option>
-          <option value="2" selected>2 · 双手法交替</option>
-          <option value="3">3 · 三手法轮换</option>
-        </select>
-        <label>seed</label>
-        <input type="number" id="seed" value="1" step="1" style="width:110px">
-        <button class="small" id="dice">🎲 新种子</button>
-        <button class="small" id="randomAll">随机编排 (R)</button>
-      </div>
-      <div class="row">
-        <label>波幅</label><input type="range" id="waveAmp" min="0" max="0.8" step="0.01" value="0.18">
-        <label>波频</label><input type="range" id="waveK" min="0.5" max="10" step="0.1" value="3.1">
-        <label>旋转</label><input type="range" id="rotAmp" min="0" max="40" step="1" value="8">
-        <label>弹跳</label><input type="range" id="bounceH" min="0" max="0.6" step="0.01" value="0.2">
-        <label>滑入</label><input type="range" id="slideD" min="0" max="2" step="0.05" value="0.6">
-        <label>脉冲</label><input type="range" id="pulse" min="0" max="0.6" step="0.01" value="0.2">
-        <label>未唱暗度</label><input type="range" id="unsungDim" min="0.1" max="0.6" step="0.01" value="0.38">
-        <label class="sync-mode"><input type="checkbox" id="flash"> 闪光</label>
-      </div>
-      <div class="row">
-        <label>已唱色</label><input type="color" id="sungColor" value="#ffffff">
-        <label>辉光</label><input type="color" id="glowColor" value="#66aaff">
-        <span class="hint">未唱色 = 已唱色 × 未唱暗度;实机上颜色还可以在「颜色」设置里覆盖。</span>
-      </div>
-      <div class="stat" id="programStats"></div>
-    </div>
-
-    <div class="card">
-      <h2>导出</h2>
-      <div class="row">
-        <button class="primary" id="exportPack">导出效果包 JSON(导入 HyperGlow)</button>
-        <button id="exportLrc">导出 LRC</button>
-        <button id="saveProject">保存工程</button>
-        <button id="loadProjectBtn">打开工程</button>
-        <input type="file" id="projectFile" accept=".json" style="display:none">
-      </div>
-      <div class="hint">
-        效果包导入 HyperGlow:外观 → 导入单词效果包 → 在「自定义单词效果」里选中。
-        预览与实机共用同一 VM,所见即所得;字体/注音由宿主绘制,以实机为准。
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="./engine.js"></script>
-<script src="./motion.js"></script>
-<script>
 'use strict';
 
 // engine.js → window.WEEngine;motion.js → window.HGMotion(UMD,与主编辑器同一份实现)
 const E = window.WEEngine;
 const M = window.HGMotion;
+
+let motionActive = false;
 
 const state = {
   lyricsSrc: '',
@@ -249,7 +28,7 @@ const state = {
   activeRowIndex: -1
 };
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById('m-' + id);
 
 // ---------------------------------------------------------------------------
 // 调色 / 字体
@@ -498,6 +277,10 @@ function formatTime(seconds) {
 }
 
 function tick() {
+  if (!motionActive) {
+    requestAnimationFrame(tick);
+    return;
+  }
   if (state.playing) {
     let t = currentTimeSec();
     const total = Math.max(0.01, state.timeline.total);
@@ -559,6 +342,7 @@ function doTap() {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (!motionActive) return;
   if (event.target && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
   if (event.code === 'Space' && $('#syncMode').checked) {
     event.preventDefault();
@@ -724,6 +508,41 @@ $('seed').value = state.seed;
 syncControlsFromStyle();
 refresh();
 requestAnimationFrame(tick);
-</script>
-</body>
-</html>
+
+  // ---- 单页模式切换与主编辑器桥 ----
+  function setVisible(visible) {
+    motionActive = visible;
+    document.body.classList.toggle('motion-mode', visible);
+    if (!visible) {
+      state.playing = false;
+      $('playBtn').textContent = '▶ 播放';
+      audio.pause();
+      state.virtualClockOffset = currentTimeSec();
+    } else {
+      refresh();
+    }
+  }
+  document.getElementById('m-back').addEventListener('click', () => setVisible(false));
+  document.getElementById('motionToggle').addEventListener('click', () => setVisible(true));
+
+  // 生成的效果直接加入主编辑器当前包(经 app.js 公开桥,与「+ 程序」同路径)
+  document.getElementById('m-addPack').addEventListener('click', () => {
+    const status = $('#addPackStatus');
+    if (!state.built) {
+      status.textContent = '程序尚未就绪,无法加入';
+      return;
+    }
+    const studio = window.WEStudio;
+    if (!studio || typeof studio.addEffect !== 'function') {
+      status.textContent = '主编辑器未就绪';
+      return;
+    }
+    const id = studio.addEffect(state.built.effect);
+    status.textContent = id
+      ? '✓ 已加入当前效果包:「' + id + '」(左侧效果列表末尾,可继续微调后随整包导出)'
+      : '✗ 加入失败(主编辑器拒绝)';
+  });
+
+  // 单页对外接口
+  window.HGMotionUI = { setVisible, isActive: () => motionActive };
+})();

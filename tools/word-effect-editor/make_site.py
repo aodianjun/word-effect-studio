@@ -17,7 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 
-SITE_FILES = ("index.html", "engine.js", "templates.js", "app.js", "motion.html", "motion.js")
+SITE_FILES = ("index.html", "engine.js", "templates.js", "app.js", "motion.js", "motion-ui.js")
 
 
 def main() -> int:
