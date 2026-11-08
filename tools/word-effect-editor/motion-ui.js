@@ -58,21 +58,21 @@ function measure(text, sizePx) {
 // ---------------------------------------------------------------------------
 
 function readControls() {
-  state.seed = Math.abs(Math.trunc(Number($('#seed').value) || 1)) || 1;
-  state.theme = $('#theme').value;
+  state.seed = Math.abs(Math.trunc(Number($('seed').value) || 1)) || 1;
+  state.theme = $('theme').value;
   state.overrides = {
-    waveAmp: Number($('#waveAmp').value),
-    waveK: Number($('#waveK').value),
-    rotAmp: Number($('#rotAmp').value),
-    bounceH: Number($('#bounceH').value),
-    slideD: Number($('#slideD').value),
-    pulse: Number($('#pulse').value),
-    unsungDim: Number($('#unsungDim').value),
-    cycle: Number($('#cycle').value),
-    flash: $('#flash').checked
+    waveAmp: Number($('waveAmp').value),
+    waveK: Number($('waveK').value),
+    rotAmp: Number($('rotAmp').value),
+    bounceH: Number($('bounceH').value),
+    slideD: Number($('slideD').value),
+    pulse: Number($('pulse').value),
+    unsungDim: Number($('unsungDim').value),
+    cycle: Number($('cycle').value),
+    flash: $('flash').checked
   };
-  const sung = E.parseColor($('#sungColor').value) || 0xFFFFFFFF;
-  const glow = E.parseColor($('#glowColor').value) || 0xFF66AAFF;
+  const sung = E.parseColor($('sungColor').value) || 0xFFFFFFFF;
+  const glow = E.parseColor($('glowColor').value) || 0xFF66AAFF;
   const dim = E.clamp(state.overrides.unsungDim, 0.1, 0.6);
   const dimAlpha = Math.round(255 * (1 - dim) + 40);
   state.palette = {
@@ -84,19 +84,19 @@ function readControls() {
 }
 
 function refresh() {
-  state.lyricsSrc = $('#lyrics').value;
+  state.lyricsSrc = $('lyrics').value;
   state.parsed = M.parseLyrics(state.lyricsSrc);
   const parseStatus = [];
   if (state.parsed.warnings.length) parseStatus.push(state.parsed.warnings.join('\n'));
   parseStatus.push('已解析 ' + state.parsed.lines.filter((l) => l.interlude == null).length + ' 行歌词' +
     (state.parsed.lines.some((l) => l.interlude != null) ? '(含间奏)' : ''));
-  $('#parseStatus').textContent = parseStatus.join('\n');
+  $('parseStatus').textContent = parseStatus.join('\n');
 
   state.timeline = M.buildTimeline(state.parsed, {
-    bpm: Number($('#bpm').value) || 120,
-    startSec: Number($('#startSec').value) || 0,
-    lineDurSec: Number($('#lineDur').value) || 0,
-    snap: $('#snap').checked,
+    bpm: Number($('bpm').value) || 120,
+    startSec: Number($('startSec').value) || 0,
+    lineDurSec: Number($('lineDur').value) || 0,
+    snap: $('snap').checked,
     tap: state.tap.slice(),
     manualTimes: state.manualTimes
   });
@@ -108,13 +108,13 @@ function refresh() {
   });
   if (state.built.ok) {
     const stats = state.built.stats;
-    $('#programStats').innerHTML =
+    $('programStats').innerHTML =
       '程序 <b>' + stats.instructions + '</b> 条指令(上限 512) · 常量 <b>' + stats.constants +
       '</b> · 逐帧绘制 <b>' + stats.drawOps + '</b>(上限 4096) · 估算 <b>' +
       (stats.estimatedBytes / 1024).toFixed(1) + '</b> KiB(上限 12) — 全部在预算内即可导入';
-    $('#frameStatus').textContent = '';
+    $('frameStatus').textContent = '';
   } else {
-    $('#programStats').innerHTML = '<span style="color:var(--bad)">程序生成失败:' +
+    $('programStats').innerHTML = '<span style="color:var(--bad)">程序生成失败:' +
       state.built.errors.join(';') + '</span>';
     state.built = null;
   }
@@ -126,7 +126,7 @@ function refresh() {
 // ---------------------------------------------------------------------------
 
 function renderLineList() {
-  const list = $('#lineList');
+  const list = $('lineList');
   const rows = state.timeline.rows;
   list.innerHTML = '';
   rows.forEach((row) => {
@@ -255,10 +255,10 @@ function drawFrame(tSeconds) {
   const sink = E.createBoxCollectorSink(measure, frame.colors.unsung, frame.textSize);
   const result = E.runProgram(state.built.effect.program, frame, sink);
   if (!result.ok || sink.failed) {
-    $('#frameStatus').textContent = '程序执行失败:' + (result.error || '预算超限') + '(实机会整块不绘制)';
+    $('frameStatus').textContent = '程序执行失败:' + (result.error || '预算超限') + '(实机会整块不绘制)';
     return;
   }
-  $('#frameStatus').textContent = '';
+  $('frameStatus').textContent = '';
   // 背景网格暗示画布边界
   ctx.strokeStyle = 'rgba(255,255,255,0.06)';
   ctx.strokeRect(8.5, 8.5, canvas.width - 17, canvas.height - 17);
@@ -286,9 +286,9 @@ function tick() {
     const total = Math.max(0.01, state.timeline.total);
     if (t >= total) {
       if (audio.src) {
-        if ($('#loop').checked) { audio.currentTime = 0; audio.play().catch(() => {}); t = 0; }
+        if ($('loop').checked) { audio.currentTime = 0; audio.play().catch(() => {}); t = 0; }
         else { state.playing = false; $('playBtn').textContent = '▶ 播放'; }
-      } else if ($('#loop').checked) {
+      } else if ($('loop').checked) {
         state.virtualClockOffset = 0;
         state.virtualClockStart = performance.now();
         t = 0;
@@ -344,10 +344,10 @@ function doTap() {
 document.addEventListener('keydown', (event) => {
   if (!motionActive) return;
   if (event.target && /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
-  if (event.code === 'Space' && $('#syncMode').checked) {
+  if (event.code === 'Space' && $('syncMode').checked) {
     event.preventDefault();
     doTap();
-  } else if (event.code === 'Backspace' && $('#syncMode').checked) {
+  } else if (event.code === 'Backspace' && $('syncMode').checked) {
     event.preventDefault();
     state.tap.pop();
     state.manualTimes = {};
@@ -398,12 +398,12 @@ for (const id of ['theme', 'cycle', 'seed', 'waveAmp', 'waveK', 'rotAmp', 'bounc
     refresh();
   });
 }
-$('#dice').addEventListener('click', () => {
+$('dice').addEventListener('click', () => {
   state.seed = Math.floor(Math.random() * 0xffffff) + 1;
   $('seed').value = state.seed;
   refresh();
 });
-$('#randomAll').addEventListener('click', randomAll);
+$('randomAll').addEventListener('click', randomAll);
 
 // ---------------------------------------------------------------------------
 // 导出
@@ -430,17 +430,17 @@ $('exportLrc').addEventListener('click', () => {
 $('saveProject').addEventListener('click', () => {
   download('motion-project-' + state.seed + '.json', JSON.stringify(M.toProject({
     lyrics: state.lyricsSrc,
-    bpm: Number($('#bpm').value) || 120,
-    startSec: Number($('#startSec').value) || 0,
-    lineDurSec: Number($('#lineDur').value) || 0,
-    snap: $('#snap').checked,
+    bpm: Number($('bpm').value) || 120,
+    startSec: Number($('startSec').value) || 0,
+    lineDurSec: Number($('lineDur').value) || 0,
+    snap: $('snap').checked,
     tap: state.tap,
     seed: state.seed,
     theme: state.theme,
     overrides: state.overrides,
     palette: {
-      sung: $('#sungColor').value,
-      glow: $('#glowColor').value
+      sung: $('sungColor').value,
+      glow: $('glowColor').value
     }
   })));
 });
@@ -453,19 +453,19 @@ $('projectFile').addEventListener('change', () => {
     try {
       const project = JSON.parse(String(reader.result));
       if (project.format !== 'hyperglow-motion-project') throw new Error('不是 Motion 工程');
-      $('#lyrics').value = String(project.lyrics || '');
-      $('#bpm').value = project.bpm || 120;
-      $('#startSec').value = project.startSec || 0;
-      $('#lineDur').value = project.lineDurSec || 0;
-      $('#snap').checked = !!project.snap;
+      $('lyrics').value = String(project.lyrics || '');
+      $('bpm').value = project.bpm || 120;
+      $('startSec').value = project.startSec || 0;
+      $('lineDur').value = project.lineDurSec || 0;
+      $('snap').checked = !!project.snap;
       state.tap = Array.isArray(project.tap) ? project.tap.slice() : [];
       state.manualTimes = {};
       state.theme = project.theme || 'lyric';
       state.seed = project.seed || 1;
       state.overrides = project.overrides || {};
       if (project.palette) {
-        if (project.palette.sung) $('#sungColor').value = project.palette.sung;
-        if (project.palette.glow) $('#glowColor').value = project.palette.glow;
+        if (project.palette.sung) $('sungColor').value = project.palette.sung;
+        if (project.palette.glow) $('glowColor').value = project.palette.glow;
       }
       syncControlsFromStyle();
       // 覆盖值回填滑杆
@@ -480,11 +480,11 @@ $('projectFile').addEventListener('change', () => {
       setIf('slideD', 'slideD', 'slideD');
       setIf('pulse', 'pulse', 'pulse');
       setIf('unsungDim', 'unsungDim', 'unsungDim');
-      if (Number.isFinite(over.cycle)) $('#cycle').value = String(over.cycle);
-      if (over.flash !== undefined) $('#flash').checked = !!over.flash;
+      if (Number.isFinite(over.cycle)) $('cycle').value = String(over.cycle);
+      if (over.flash !== undefined) $('flash').checked = !!over.flash;
       refresh();
     } catch (error) {
-      $('#parseStatus').textContent = '工程打开失败:' + error.message;
+      $('parseStatus').textContent = '工程打开失败:' + error.message;
     }
   };
   reader.readAsText(file);
@@ -494,7 +494,7 @@ $('projectFile').addEventListener('change', () => {
 // 启动
 // ---------------------------------------------------------------------------
 
-$('#lyrics').value = [
+$('lyrics').value = [
   '# 把下面的歌词换成你自己的;每行开始的瞬间按空格打点',
   '[00:00.50]夜色轻轻*落下*',
   '街灯把影子拉长!',
@@ -527,7 +527,7 @@ requestAnimationFrame(tick);
 
   // 生成的效果直接加入主编辑器当前包(经 app.js 公开桥,与「+ 程序」同路径)
   document.getElementById('m-addPack').addEventListener('click', () => {
-    const status = $('#addPackStatus');
+    const status = $('addPackStatus');
     if (!state.built) {
       status.textContent = '程序尚未就绪,无法加入';
       return;

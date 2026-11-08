@@ -1162,7 +1162,7 @@ Every word a little light</textarea>
   <h1>HyperGlow Motion</h1>
   <span class="sub">歌词动态排版编排器 · 参考创作流自 JIZURA (MIT) · 产出 HyperGlow 盒模式效果包</span>
   <span class="spacer"></span>
-  <button class="back-btn" id="m-m-back">← 返回编辑器</button>
+  <button class="back-btn" id="m-back">← 返回编辑器</button>
 </header>
 
 <div class="layout">
@@ -1278,13 +1278,14 @@ Every word a little light</textarea>
     <div class="card">
       <h2>导出</h2>
       <div class="row">
-        <button class="primary" id="m-exportPack">导出效果包 JSON(导入 HyperGlow)</button>
+        <button class="primary" id="m-addPack">加入当前效果包</button>
+        <button id="m-exportPack">导出效果包 JSON</button>
         <button id="m-exportLrc">导出 LRC</button>
         <button id="m-saveProject">保存工程</button>
         <button id="m-loadProjectBtn">打开工程</button>
         <input type="file" id="m-projectFile" accept=".json" style="display:none">
       </div>
-      <div class="hint" id="addPackStatus"></div>
+      <div class="hint" id="m-addPackStatus"></div>
       <div class="hint">
         「导出效果包 JSON」也可走外观 → 导入单词效果包;「加入当前效果包」直接进左侧效果列表。
         预览与实机共用同一 VM,所见即所得;字体/注音由宿主绘制,以实机为准。
