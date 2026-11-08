@@ -25,7 +25,7 @@ python -m http.server 8799 --bind 127.0.0.1
 - **单独仓库**：把 `index.html` / `engine.js` / `templates.js` / `app.js` 放到仓库根目录，
   Settings → Pages → Deploy from a branch → `main` / `(root)`。
 - **现有仓库**：仓库已带 `.github/workflows/pages-word-effect-editor.yml`，Pages Source 选
-  **GitHub Actions** 后推 `main` 即可；工作流只发布四个站点文件。
+  **GitHub Actions** 后推 `main` 即可；工作流只发布六个站点文件。
 - 生成干净目录：`python tools/word-effect-editor/make_site.py --out build/word-effect-studio`。
 
 完整步骤和注意事项见 [DEPLOY_GITHUB_PAGES.md](DEPLOY_GITHUB_PAGES.md)。
@@ -180,6 +180,31 @@ add / mul / sin / clamp / drawText / save / restore / end
 - 「复制」复制规范化 JSON；`Ctrl+S` 直接导出。
 - 工作区自动存到 `localStorage`，刷新不丢。
 
+## Motion 编排(歌词动态排版)
+
+主编辑器内置工作区(顶栏 **Motion 编排** 按钮切换,与编辑器同页,不再单独开页),
+参考 [JIZURA](https://github.com/852wa/JIZURA)(MIT)的创作流,
+把「整首歌的动态排版」一次性编排成**一个 HyperGlow 盒模式效果**。
+
+流程:**写歌词(JIZURA 式轻量语法)→ 对时间(BPM 铺底 / 点击同步 / LRC 时间戳)→
+选主题摇一摇(seed 可复现)→ 导出效果包**。
+
+- **歌词语法**(与 JIZURA 对齐的子集):`/` 镜头切分、`*强调*`、行末 `!` 闪光、
+  `歌词|注音`、`[mm:ss.xx]` LRC 时间戳、`[间奏 8]`、`#` 注释、空行停顿。
+- **时间**:优先级为点击同步(Space 打点 / 退格撤销)> LRC 时间戳 > BPM 铺底;可选拍点
+  吸附;行列表可直接改行时间与跳转。
+- **编排**:四个参数化手法(绕词中心旋转的正弦波浪 / 弹跳 / 左右滑入 / 强调脉冲)按
+  「(行号+词序) mod 轮换周期」分配;主题(抒情 / 动态文字 / 文字PV / 和风)与 seed 决定
+  全部参数,相同 seed 逐字节复现;滑杆可覆盖任一参数。
+- **预览即实机**:预览直接跑与实机同一份 `EffectVm` 盒收集器,导出的程序与预览所见一致。
+- **直接入包**:编排好点「加入当前效果包」,效果进左侧列表末尾,可继续微调后随整包导出;
+  也可以导出效果包 JSON / LRC / 可回灌的工程 JSON。
+- **预算护栏**:生成器保证落在 512 指令 / 12 KiB / 4096 绘制每帧内,状态栏实时显示用量。
+
+与 JIZURA 的差异(边界):不导出 MP4 / PNG 序列(HyperGlow 的目标是锁屏/AOD 实时渲染);
+不做音频节拍检测(v1 用 BPM + 吸附);特效库收敛到四个手法公式而不是数百种部件;字体与
+注音由 HyperGlow 宿主绘制。注音语法可解析,但只作为行备注记录。
+
 ## 文件
 
 | 文件 | 作用 |
@@ -188,8 +213,10 @@ add / mul / sin / clamp / drawText / save / restore / end
 | `app.js` | UI、预览渲染、曲线编辑、导入导出 |
 | `engine.js` | 规范化、缓动、DSL 求值、汇编器、字节码 VM、预览分词（浏览器 + Node 共用） |
 | `templates.js` | 十个 DSL 模板 + 十个程序模板 |
-| `test_engine.js` | Node 回归测试（62 项） |
-| `make_site.py` | 把四个站点文件打包到 `build/word-effect-studio` |
+| `motion.js` / `motion-ui.js` | Motion 编排核心 + 单页工作区 UI(顶栏「Motion 编排」切换) |
+| `test_engine.js` | Node 回归测试(编辑器 68 项) |
+| `test_motion.js` | Motion 编排核心回归测试(14 项) |
+| `make_site.py` | 把站点文件打包到 `build/word-effect-studio`(含 Motion) |
 | `DEPLOY_GITHUB_PAGES.md` | GitHub Pages 部署步骤与注意事项 |
 
 ## 回归测试
