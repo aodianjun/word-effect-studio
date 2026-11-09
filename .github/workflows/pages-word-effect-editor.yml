@@ -1,8 +1,8 @@
 name: Deploy Word Effect Studio to GitHub Pages
 
 # The editor is a static site (index.html + engine.js + templates.js + app.js).
-# There is no build step: this workflow only stages the site files and the deco/
-# sprite assets into _site and lets GitHub Pages serve the editor at the root.
+# There is no build step: this workflow only stages the six site files into _site
+# and lets GitHub Pages serve the editor at the repository root.
 #
 # One-time setup: repository Settings -> Pages -> Source: GitHub Actions.
 on:
@@ -43,7 +43,6 @@ jobs:
              tools/word-effect-editor/motion-ui.js \
              tools/word-effect-editor/motion.js \
              _site/
-          cp -r tools/word-effect-editor/deco _site/deco
           ls -l _site
 
       - name: Configure Pages
