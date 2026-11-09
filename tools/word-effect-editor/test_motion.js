@@ -325,4 +325,33 @@ test('wave boxes land on word.x / baseline (drawText push-order pin)', () => {
   });
 });
 
+test('choreo modes dispatch differently and stay in budget', () => {
+  const base = { slideStagger: 0.05, slideAlt: true };
+  const modes = { cycle: 'cycle', fixed: 'fixed', songRandom: 'songRandom' };
+  const seen = {};
+  for (const [name, mode] of Object.entries(modes)) {
+    const style = M.styleFromSeed(5, 'lyric', Object.assign({}, base, { choreoMode: mode }));
+    assert.strictEqual(style.choreoMode, mode);
+    const built = M.buildEffectPack({ rows: [] }, style, { title: mode });
+    assert.ok(built.ok, mode + ': ' + (built.errors || []).join('; '));
+    assert.ok(built.stats.instructions <= E.MAX_EFFECT_CODE, mode + ' instructions');
+    const src = M.buildProgramSource(style);
+    if (mode === 'fixed') assert.ok(src.includes('stringLength'), 'fixed dispatch missing');
+    if (mode === 'songRandom') {
+      assert.ok(src.includes('stringLength'), 'songRandom missing stringLength');
+      assert.ok(src.includes('wordCount'), 'songRandom missing wordCount');
+      assert.ok(style.choreoA > 0 && style.choreoB > 0, 'songRandom multipliers missing');
+    }
+    if (mode === 'cycle') assert.ok(!src.includes('stringLength'), 'cycle should not use length');
+    seen[mode] = M.buildEffectPack({ rows: [] }, style, { title: mode }).pack;
+  }
+  // 固定与每歌随机的派发片段不同
+  assert.notDeepStrictEqual(seen.fixed, seen.songRandom);
+});
+
+test('invalid choreoMode falls back to cycle', () => {
+  const style = M.styleFromSeed(1, 'lyric', { choreoMode: 'particles' });
+  assert.strictEqual(style.choreoMode, 'cycle');
+});
+
 console.log('\n' + passed + ' tests passed' + (process.exitCode ? ' — with failures' : ''));

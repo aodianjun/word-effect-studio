@@ -198,6 +198,10 @@ add / mul / sin / clamp / drawText / save / restore / end
   打字机 / 和风摇曳 / 热血全开 / 星空闪烁 / 极简纯净)一键套用,同预设同观感;主题与 seed
   决定随机编排的全部参数,相同 seed 逐字节复现;滑杆可覆盖任一参数(覆盖后预设回落「自定义」)。
 - **预览即实机**:预览直接跑与实机同一份 `EffectVm` 盒收集器,导出的程序与预览所见一致。
+- **通用显示**:导出的程序不绑定具体歌词——任何歌都按当前预设与「编排顺序」显示
+  (轮换 / 固定顺序按行长 / 每歌随机按内容派发手法);歌词只用于预览与 AI 切词。
+- **AI 切词**:歌词卡内置 AI 面板(OpenAI 兼容接口 + 模型 + 密钥,存在本浏览器),
+  一键把原始歌词按语义切行、标镜头/强调/闪光,回填时间轴;可手动微调。
 - **直接入包**:编排好点「加入当前效果包」,效果进左侧列表末尾,可继续微调后随整包导出;
   也可以导出效果包 JSON / LRC / 可回灌的工程 JSON。
 - **预算护栏**:生成器保证落在 512 指令 / 12 KiB / 4096 绘制每帧内,状态栏实时显示用量。
@@ -216,7 +220,7 @@ add / mul / sin / clamp / drawText / save / restore / end
 | `templates.js` | 十个 DSL 模板 + 十个程序模板 |
 | `motion.js` / `motion-ui.js` | Motion 编排核心 + 单页工作区 UI(顶栏「Motion 编排」切换) |
 | `test_engine.js` | Node 回归测试(编辑器 68 项) |
-| `test_motion.js` | Motion 编排核心回归测试(19 项) |
+| `test_motion.js` | Motion 编排核心回归测试(21 项) |
 | `make_site.py` | 把站点文件打包到 `build/word-effect-studio`(含 Motion) |
 | `DEPLOY_GITHUB_PAGES.md` | GitHub Pages 部署步骤与注意事项 |
 

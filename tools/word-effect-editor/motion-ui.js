@@ -18,6 +18,7 @@ const state = {
   manualTimes: {},
   seed: 1,
   presetKey: 'ballad',
+  choreoMode: 'cycle',
   theme: 'lyric',
   overrides: {},
   palette: { sung: 0xFFFFFFFF, unsung: 0x88FFFFFF, glow: 0xFF66AAFF, accent: 0xFFFFAA33 },
@@ -72,6 +73,7 @@ function readControls() {
     pulse: Number($('pulse').value),
     unsungDim: Number($('unsungDim').value),
     cycle: Number($('cycle').value),
+    choreoMode: $('choreo').value,
     flash: $('flash').checked
   };
   const sung = E.parseColor($('sungColor').value) || 0xFFFFFFFF;
@@ -394,6 +396,7 @@ function syncControlsFromStyle() {
   set('pulse', style.pulse);
   set('unsungDim', style.unsungDim);
   set('cycle', style.cycle);
+  $('choreo').value = state.choreoMode;
   $('flash').checked = style.flash;
   $('preset').value = state.presetKey;
 }
@@ -409,7 +412,7 @@ function applyPreset(key) {
   refresh();
 }
 
-for (const id of ['bpm', 'startSec', 'lineDur', 'snap']) {
+for (const id of ['bpm', 'startSec', 'lineDur', 'snap', 'choreo']) {
   $(id).addEventListener('change', refresh);
 }
 for (const id of ['theme', 'cycle', 'seed', 'waveAmp', 'waveK', 'rotAmp', 'bounceH',
@@ -539,6 +542,86 @@ state.seed = 20261109;
 $('seed').value = state.seed;
 applyPreset('ballad');
 requestAnimationFrame(tick);
+
+
+  // ---- AI 切词:调用 OpenAI 兼容接口,按语义切行并回填歌词 ----
+  const AI_STORE_KEY = 'hyperglow-motion-ai';
+  const aiSettings = (() => {
+    try { return JSON.parse(localStorage.getItem(AI_STORE_KEY) || '{}'); }
+    catch (error) { return {}; }
+  })();
+  const aiField = (id, key) => {
+    const el = $(id);
+    if (aiSettings[key]) el.value = aiSettings[key];
+    el.addEventListener('change', () => {
+      const next = {};
+      for (const [k, src] of [['endpoint', 'aiEndpoint'], ['model', 'aiModel'], ['key', 'aiKey']]) {
+        next[k] = $(src).value.trim();
+      }
+      try { localStorage.setItem(AI_STORE_KEY, JSON.stringify(next)); } catch (error) {}
+    });
+  };
+  aiField('aiEndpoint', 'endpoint');
+  aiField('aiModel', 'model');
+  aiField('aiKey', 'key');
+
+  const AI_SYSTEM_PROMPT = [
+    '你是歌词排版助手。把用户给的歌词整理成适合逐行卡拉OK显示的歌词行:',
+    '1. 按语义和气口切分,每行一句,行长尽量均衡(约 6-14 个字);',
+    '2. 保留原文措辞,不要改写、不要翻译、不要增删内容;',
+    '3. 副歌/高潮句可在整段外包一层 *强调* 标记;特别炸的句子行末加 ! (闪光);',
+    '4. 需要分镜的长句用 / 标记切分点;注音用 歌词|注音;',
+    '5. 间奏用 [间奏 秒数] 单独一行;不要输出任何解释、序号或代码块,只输出整理后的歌词行。'
+  ].join('\n');
+
+  $('aiRun').addEventListener('click', async () => {
+    const status = $('aiStatus');
+    const endpoint = $('aiEndpoint').value.trim();
+    const model = $('aiModel').value.trim();
+    const key = $('aiKey').value.trim();
+    const raw = $('lyrics').value.trim();
+    if (!endpoint || !model || !key) {
+      status.textContent = '请先填接口地址、模型和密钥';
+      return;
+    }
+    if (!raw) {
+      status.textContent = '歌词是空的';
+      return;
+    }
+    status.textContent = 'AI 切词中…';
+    try {
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify({
+          model,
+          temperature: 0.4,
+          messages: [
+            { role: 'system', content: AI_SYSTEM_PROMPT },
+            { role: 'user', content: raw }
+          ]
+        })
+      });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const data = await resp.json();
+      let out = data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content : '';
+      if (out.startsWith('```')) {
+        out = out.slice(out.indexOf('\n') + 1);
+      }
+      if (out.endsWith('```')) {
+        out = out.slice(0, out.length - 3);
+      }
+      out = out.trim();
+      if (!out) throw new Error('AI 返回为空');
+      $('lyrics').value = out;
+      refresh();
+      status.textContent = '✓ AI 切词完成,已回填歌词(可手动微调)';
+    } catch (error) {
+      status.textContent = '✗ AI 切词失败:' + (error && error.message ? error.message : error) +
+        '(常见原因:接口不允许浏览器跨域、密钥无效)';
+    }
+  });
 
   // ---- 单页模式切换与主编辑器桥 ----
   function setVisible(visible) {
