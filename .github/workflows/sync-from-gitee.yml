@@ -73,6 +73,8 @@ jobs:
              tools/word-effect-editor/motion-ui.js \
              tools/word-effect-editor/motion.js \
              tools/word-effect-editor/motion-ui.js \
+             tools/word-effect-editor/motion.js \
+             tools/word-effect-editor/motion-ui.js \
              _site/
           ls -l _site
 
