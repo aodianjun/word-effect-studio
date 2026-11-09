@@ -334,6 +334,14 @@ const PRESETS = {
   }
 };
 
+/**
+ * 通用显示的编排顺序(运行时按当前行内容派发手法,不绑定具体歌词):
+ *   cycle      轮换 —— (块内词序) mod 轮换周期
+ *   fixed      固定顺序 —— 行字符数 mod 轮换周期(每首歌一致)
+ *   songRandom 每歌随机 —— (字符数·A + 词数·B) mod 轮换周期(A/B 由 seed 定,歌与歌分配不同)
+ */
+const CHOREO_MODES = { cycle: 1, fixed: 1, songRandom: 1 };
+
 const round4 = (value) => Math.round(value * 10000) / 10000;
 const pickRange = (rng, range) => range[0] + (range[1] - range[0]) * rng();
 
@@ -366,6 +374,7 @@ function styleFromSeed(seed, themeKey, overrides) {
       ? over.slideStagger
       : round4(pickRange(rng, theme.slideStagger || [0.02, 0.08])),
     slideAlt: over.slideAlt === undefined ? rng() < 0.5 : !!over.slideAlt,
+    choreoMode: over.choreoMode in CHOREO_MODES ? over.choreoMode : 'cycle',
     pulse: jitter('pulse'),
     cycle,
     flash: over.flash === undefined ? rng() < 0.5 : !!over.flash,
@@ -375,6 +384,8 @@ function styleFromSeed(seed, themeKey, overrides) {
   };
   // 旋向随机翻转:仅对未显式覆盖的 waveAmp 生效(覆盖值按用户给的原样用)
   if (!Number.isFinite(over.waveAmp) && rng() < 0.5) style.waveAmp = -style.waveAmp;
+  style.choreoA = Math.round((1 + rng() * 3) * 100) / 100;
+  style.choreoB = Math.round((1 + rng() * 3) * 100) / 100;
   return style;
 }
 
@@ -592,6 +603,36 @@ function buildProgramSource(style) {
     'restore'
   ];
 
+  // 手法派发:按编排顺序模式生成压栈片段(结果 = 槽位号 0..cycle-1)
+  const choreoDispatch = style.choreoMode === 'fixed'
+    ? [
+      '  loadLocal 2',
+      '  lineAtField text',
+      '  stringLength',
+      '  push ' + num(style.cycle),
+      '  mod',
+    ]
+    : style.choreoMode === 'songRandom'
+      ? [
+      '  loadLocal 2',
+      '  lineAtField text',
+      '  stringLength',
+      '  push ' + num(style.choreoA),
+      '  mul',
+      '  wordCount',
+      '  push ' + num(style.choreoB),
+      '  mul',
+      '  add',
+      '  push ' + num(style.cycle),
+      '  mod',
+    ]
+      : [
+      '  loadLocal 3',
+      '  loadLocal 0',
+      '  add',
+      '  push ' + num(style.cycle),
+      '  mod',
+    ];
   const lines = [
     '; HyperGlow Motion · 主题=' + style.themeName + ' · seed=' + style.seed,
     'wordCount',
@@ -616,11 +657,7 @@ function buildProgramSource(style) {
     '  lineAtField progress',
     '  storeLocal 5',
     ...indent(prologue),
-    '  loadLocal 3',
-    '  loadLocal 0',
-    '  add',
-    '  push ' + num(style.cycle),
-    '  mod',
+    ...choreoDispatch,
     '  dup',
     '  push 0',
     '  eq',
@@ -990,6 +1027,7 @@ function clampNumber(value, min, max, fallback) {
     makeRng,
     THEMES,
     PRESETS,
+    CHOREO_MODES,
     styleFromSeed,
     buildProgramSource,
     buildEffectPack,

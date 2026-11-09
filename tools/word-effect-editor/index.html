@@ -1171,6 +1171,21 @@ Every word a little light</textarea>
       <h2>歌词</h2>
       <textarea id="m-lyrics" spellcheck="false"></textarea>
       <div id="m-parseStatus" class="hint"></div>
+      <details style="margin-top:8px">
+        <summary>AI 切词(可选):自动按语义切行、标镜头/强调/闪光</summary>
+        <div class="row" style="margin-top:8px">
+          <input type="text" id="m-aiEndpoint" style="flex:1" placeholder="接口地址,如 https://…/v1/chat/completions" autocomplete="off">
+        </div>
+        <div class="row">
+          <input type="text" id="m-aiModel" placeholder="模型名" autocomplete="off" style="flex:1">
+          <input type="password" id="m-aiKey" placeholder="密钥 sk-…" autocomplete="off" style="flex:1">
+        </div>
+        <div class="row">
+          <button class="primary small" id="m-aiRun">AI 切词</button>
+          <span class="hint" id="m-aiStatus"></span>
+        </div>
+        <div class="hint">OpenAI 兼容接口即可;密钥只存在本浏览器 localStorage,浏览器直调接口(接口需允许跨域)。结果回填歌词框,可手动微调。</div>
+      </details>
       <details>
         <summary>语法说明</summary>
         <ul class="syntax">
@@ -1241,6 +1256,12 @@ Every word a little light</textarea>
       <div class="row">
         <label>预设</label>
         <select id="m-preset"></select>
+        <label>顺序</label>
+        <select id="m-choreo" style="width:150px" title="每行手法按什么顺序分配;对所有歌生效">
+          <option value="cycle">轮换</option>
+          <option value="fixed">固定顺序(按行长)</option>
+          <option value="songRandom">每歌随机(按内容)</option>
+        </select>
         <label>主题</label>
         <select id="m-theme">
           <option value="lyric">抒情</option>
@@ -1293,6 +1314,7 @@ Every word a little light</textarea>
       <div class="hint">
         「导出效果包 JSON」也可走外观 → 导入单词效果包;「加入当前效果包」直接进左侧效果列表。
         预览与实机共用同一 VM,所见即所得;字体/注音由宿主绘制,以实机为准。
+        <b>导出的程序是通用的:不绑定具体歌词,任何歌都按当前预设与顺序编排显示。</b>歌词只用于预览与 AI 切词。
       </div>
     </div>
   </div>
