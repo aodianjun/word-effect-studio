@@ -43,6 +43,7 @@ jobs:
              tools/word-effect-editor/motion-ui.js \
              tools/word-effect-editor/motion.js \
              _site/
+          cp -r tools/word-effect-editor/deco _site/deco
           ls -l _site
 
       - name: Configure Pages
