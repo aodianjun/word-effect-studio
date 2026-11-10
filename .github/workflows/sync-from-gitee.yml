@@ -56,7 +56,6 @@ jobs:
         if: steps.sync.outputs.changed == 'true'
         run: git push origin HEAD:main
 
-      # probe-marker
       - name: Stage editor site
         if: steps.sync.outputs.changed == 'true'
         run: |
@@ -68,25 +67,8 @@ jobs:
              tools/word-effect-editor/app.js \
              tools/word-effect-editor/motion.js \
              tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
-             tools/word-effect-editor/motion.js \
-             tools/word-effect-editor/motion-ui.js \
              _site/
+          cp -r tools/word-effect-editor/deco _site/deco
           ls -l _site
 
       - name: Configure Pages
